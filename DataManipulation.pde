@@ -55,22 +55,28 @@ void captureEvent(Capture vid) {
   }
   
   // Process the list of shapes to be shifted
-  for(ArrayList<PVector> shape : shapesToShift) {
+  for(int i = 0; i < shapesToShift.size(); i++) {
+    ArrayList<PVector> shape = shapesToShift.get(i);
     float minX = Float.MAX_VALUE;
     float minY = Float.MAX_VALUE;
     float maxX = Float.MIN_VALUE;
     float maxY = Float.MIN_VALUE;
-    int index = 0;
+    
+    // Calculate the bounding box of the shape
     for (PVector vertex : shape) {
       minX = min(minX, vertex.x);
       minY = min(minY, vertex.y);
       maxX = max(maxX, vertex.x);
       maxY = max(maxY, vertex.y);
-      shiftPix(minX,minY,maxX,maxY, shape, shapeShifts.get(index)[0],shapeShifts.get(index)[1]);
-      index++;
+    }
+    
+    // Check if the index is within the bounds of shapeShifts
+    if (i < shapeShifts.size()) {
+      int[] shift = shapeShifts.get(i);
+      shiftPix(minX, minY, maxX, maxY, shape, shift[0], shift[1]);
     }
   }
-}
+} //<>//
 
 void draw() {
   image(vid, 0, 0);
@@ -166,22 +172,38 @@ void detectClosedShapes() {
     }
   }
   
-  /*for(int i = 0; i < intersect.size(); i++) {
-    ArrayList<PVector> closedShape = new ArrayList<PVector>();
-    closedShape.add(start1);
-    closedShape.add(end1);
-    closedShape.add(end2);
-    closedShape.add(start2);
-    closedShapes.add(closedShape);
-    
-    // add shift
-    int shiftX = (int)random(-50, 50);
-    int shiftY = (int)random(-50, 50);
-    int[] shift = {shiftX,shiftY};
-    shapeShifts.add(shift);
-  }*/
+  for (int i = 0; i < intersect.size(); i++) {
+    for (int j = i + 1; j < intersect.size(); j++) {
+      PVector[] inter1 = intersect.get(i);
+      PVector[] inter2 = intersect.get(j);
+      
+      // Check if the two intersecting segments form a closed shape
+      if (segmentsFormClosedShape(inter1, inter2)) {
+        // Store the closed shape
+        ArrayList<PVector> closedShape = new ArrayList<PVector>();
+        closedShape.add(inter1[0]);
+        closedShape.add(inter1[1]);
+        closedShape.add(inter1[2]);
+        closedShape.add(inter1[3]);
+        closedShapes.add(closedShape);
+        
+        // Remove the segments used to form the closed shape
+        intersect.remove(j);
+        intersect.remove(i);
+        
+        // Reset loop indices
+        i = 0;
+        j = 0;
+      }
+    }
+  }
 }
-
+// Function to check if two intersecting segments form a closed shape
+boolean segmentsFormClosedShape(PVector[] inter1, PVector[] inter2) {
+  // Check if the end points of one segment match the start or end points of the other segment
+  return inter1[0].equals(inter2[0]) || inter1[0].equals(inter2[1]) ||
+         inter1[1].equals(inter2[0]) || inter1[1].equals(inter2[1]);
+}
 boolean linesIntersect(PVector p1, PVector p2, PVector p3, PVector p4) {
   float uA = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / ((p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y));
   float uB = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / ((p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y));
