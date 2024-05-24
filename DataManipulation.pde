@@ -19,7 +19,7 @@ void setup() {
   size(640, 480);
   vid = new Capture(this, width, height);
   vid.start();
-  stroke(255);
+  stroke(0);
   frameRate(24);
 } //<>//
 
