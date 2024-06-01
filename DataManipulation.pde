@@ -1,10 +1,6 @@
-import processing.video.*;
+import processing.video.*; //<>//
 
 // CLICK TO BREAK THE SCREEN
-
-PImage img;
-PImage ogImg;
-
 Capture vid;
 
 ArrayList<PVector[]> crackSegments = new ArrayList<PVector[]>(); // Store line segments
@@ -15,23 +11,74 @@ ArrayList<PVector[]> intersect = new ArrayList<PVector[]>();
 
 boolean addingCracks = false;
 
+int numPoints = 200;
+PVector[] points = new PVector[numPoints];
+color[] colors = new color[numPoints];
+boolean shatter = false;
+PVector impactPoint;
+PVector[] velocities;
+Voronoi[] voronoi = new Voronoi[numPoints];
+
 void setup() {
   size(640, 480);
   vid = new Capture(this, width, height);
   vid.start();
   stroke(0);
-  frameRate(24);
-} //<>//
+  frameRate(30);
+}
+
+void captureEvent(Capture c) {
+  c.read();
+}
 
 void draw() {
-  if(vid.available()) {
+  if (vid.available()) {
     vid.read();
-    
-    if(!addingCracks) {
+  }
+  vid.loadPixels();
+  loadPixels();
+  
+  if (shatter) {
+    for (int i = 0; i < numPoints; i++) {
+      points[i].add(velocities[i]);
+    }
+  }
+
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
+      int closestPoint = -1;
+      float closestDistance = Float.MAX_VALUE;
+
+      for (int i = 0; i < numPoints; i++) {
+        float d = dist(x, y, points[i].x, points[i].y);
+        if (d < closestDistance) {
+          closestDistance = d;
+          closestPoint = i;
+        }
+      }
+
+      int index = x + y * width;
+      if (closestPoint != -1) {
+        int videoIndex = x + y * vid.width;
+        pixels[index] = vid.pixels[closestPoint];
+      }
+    }
+  }
+  updatePixels();
+  vid.updatePixels();
+  
+   // Draw seed points
+  noStroke();
+  fill(255, 0, 0);
+  for (int i = 0; i < numPoints; i++) {
+    ellipse(points[i].x, points[i].y, 5, 5);
+  }
+  
+    /*if(!addingCracks) {
       for(int i = 0; i < closedShapes.size(); i++) {
         ArrayList<PVector> shape = closedShapes.get(i);
         float minX = Float.MAX_VALUE;
-        float minY = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE; 
         float maxX = Float.MIN_VALUE;
         float maxY = Float.MIN_VALUE;
         
@@ -53,14 +100,33 @@ void draw() {
     
     
   }
-  image(vid, 0, 0);
+  
   for(int i = 1; i < crackSegments.size(); i++) {
       line(crackSegments.get(i)[0].x, crackSegments.get(i)[0].y, crackSegments.get(i)[1].x, crackSegments.get(i)[1].y);
-    }
+    }*/
+  
 }
 
 void mousePressed() {
-  cracks(mouseX, mouseY);
+  //cracks(mouseX, mouseY);
+  crackVoronoi();
+  
+}
+
+void crackVoronoi() {
+  shatter = true;
+  for (int i = 0; i < numPoints; i++) {
+    points[i] = new PVector(random(width), random(height));
+    voronoi[i] = new Voronoi(points[i]);
+  }
+
+  impactPoint = new PVector(width / 2, height / 2);
+  for (int i = 0; i < numPoints; i++) {
+    PVector dir = PVector.sub(points[i], impactPoint);
+    dir.normalize();
+    dir.mult(random(5, 15));
+    velocities[i] = dir;
+  }
 }
 
 void cracks(int x, int y) {
