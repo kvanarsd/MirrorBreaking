@@ -98,38 +98,34 @@ void mousePressed() {
 }
 
 void crackDelaunay(int x, int y) {
-  // Set the first point as the mouse click point
+  // Add the mouse click point as the first point
+  PVector[] points = new PVector[numPoints];
   points[0] = new PVector(x, y);
 
-  // Calculate points around the mouse click position with varying radius
-  float minRadius = 50; // Minimum radius
-  float maxRadius = 200; // Maximum radius
+  // Generate random points around the mouse click position
   for (int i = 1; i < numPoints; i++) {
-    float radius = random(minRadius, maxRadius);
+    // Calculate random angle and distance
     float angle = random(0, TWO_PI);
-    float xPos = x + cos(angle) * radius;
-    float yPos = y + sin(angle) * radius;
+    float distance = random(0, 600); // Adjust the maximum distance as needed
+
+    // Calculate the position of the point
+    float xPos = x + cos(angle) * distance;
+    float yPos = y + sin(angle) * distance;
     points[i] = new PVector(xPos, yPos);
   }
 
   // Generate Delaunay triangles
-  delaunayTriangles.clear();
-  delaunayTriangles = generateDelaunay(points);
+  ArrayList<Triangle> delaunayTriangles = generateDelaunay(points);
   println("Number of Delaunay Triangles: " + delaunayTriangles.size());
+
 
   // Adjust vertices of triangles based on shatter effect
   for (Triangle tri : delaunayTriangles) {
-    for (PVector p : tri.getPoints()) {
-      float distX = p.x - x;
-      float distY = p.y - y;
-      float distance = sqrt(distX * distX + distY * distY);
-      float maxDisplacement = map(distance, 0, maxRadius, 10, 50); // Adjust maximum displacement range
-      float displacement = random(0, maxDisplacement); // Random displacement within the calculated maximum
-      float directionX = distX / distance;
-      float directionY = distY / distance;
-      p.x = x + directionX * displacement; // Set the new x position
-      p.y = y + directionY * displacement; // Set the new y position
-    }
+    beginShape();
+    vertex(tri.p1.x, tri.p1.y);
+    vertex(tri.p2.x, tri.p2.y);
+    vertex(tri.p3.x, tri.p3.y);
+    endShape(CLOSE);
   }
 
   shattered = true;
