@@ -1,4 +1,6 @@
-import processing.video.*; //<>//
+import geomerative.*; //<>//
+
+import processing.video.*;
 
 // CLICK TO BREAK THE SCREEN
 Capture vid;
@@ -31,7 +33,7 @@ void draw() {
     vid.read();
   }
   
-  /*vid.loadPixels();
+  vid.loadPixels();
   loadPixels();
     
   if(shattered) {
@@ -58,7 +60,7 @@ void draw() {
   }
   
   updatePixels();
-  vid.updatePixels();*/
+  vid.updatePixels();
   
     /*if(!addingCracks) {
       for(int i = 0; i < closedShapes.size(); i++) {
