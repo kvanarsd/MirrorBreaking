@@ -14,7 +14,7 @@ ArrayList<RPoint[]> intersect = new ArrayList<RPoint[]>();
 
 boolean addingCracks = false;
 
-int numPoints = 200;
+int numPoints = 100;
 PVector[] points = new PVector[numPoints];
 boolean shattered = false;
 PVector impactPoint;
@@ -38,15 +38,14 @@ void draw() {
     vid.read();
   }
   
-  image(vid, 0, 0);
-  
   if (shattered) {
     println("Shattered effect is being applied");
-    loadPixels();
+    vid.loadPixels();
     
     for (Triangle tri : delaunayTriangles) {
       int colorT = getColorFromTriangle(tri);
       fill(colorT);
+      noStroke();
       beginShape();
       vertex(tri.p1.x, tri.p1.y);
       vertex(tri.p2.x, tri.p2.y);
@@ -55,7 +54,9 @@ void draw() {
     }
 
     updatePixels();
-  } 
+  } else {
+    image(vid, 0, 0);
+  }
   
     /*if(!addingCracks) {
       for(int i = 0; i < closedShapes.size(); i++) {
@@ -97,12 +98,21 @@ void mousePressed() {
 }
 
 void crackDelaunay(int x, int y) {
-  for (int i = 0; i < numPoints; i++) {
-    points[i] = new PVector(random(width), random(height));
+  // Set the first point as the mouse click point
+  points[0] = new PVector(x, y);
+
+  // Calculate points around the mouse click position with varying radius
+  float minRadius = 50; // Minimum radius
+  float maxRadius = 200; // Maximum radius
+  for (int i = 1; i < numPoints; i++) {
+    float radius = random(minRadius, maxRadius);
+    float angle = random(0, TWO_PI);
+    float xPos = x + cos(angle) * radius;
+    float yPos = y + sin(angle) * radius;
+    points[i] = new PVector(xPos, yPos);
   }
 
-  impactPoint = new PVector(x, y);
-
+  // Generate Delaunay triangles
   delaunayTriangles.clear();
   delaunayTriangles = generateDelaunay(points);
   println("Number of Delaunay Triangles: " + delaunayTriangles.size());
@@ -110,19 +120,21 @@ void crackDelaunay(int x, int y) {
   // Adjust vertices of triangles based on shatter effect
   for (Triangle tri : delaunayTriangles) {
     for (PVector p : tri.getPoints()) {
-      float distX = p.x - impactPoint.x;
-      float distY = p.y - impactPoint.y;
+      float distX = p.x - x;
+      float distY = p.y - y;
       float distance = sqrt(distX * distX + distY * distY);
-      float displacement = random(10, 50); // Adjust displacement range
+      float maxDisplacement = map(distance, 0, maxRadius, 10, 50); // Adjust maximum displacement range
+      float displacement = random(0, maxDisplacement); // Random displacement within the calculated maximum
       float directionX = distX / distance;
       float directionY = distY / distance;
-      p.x += directionX * displacement;
-      p.y += directionY * displacement;
+      p.x = x + directionX * displacement; // Set the new x position
+      p.y = y + directionY * displacement; // Set the new y position
     }
   }
 
   shattered = true;
 }
+
 
 ArrayList<Triangle> generateDelaunay(PVector[] points) {
   ArrayList<Triangle> triangles = new ArrayList<Triangle>();
@@ -184,15 +196,12 @@ ArrayList<Triangle> generateDelaunay(PVector[] points) {
 }
 
 int getColorFromTriangle(Triangle tri) {
-  int x = (int)((tri.p1.x + tri.p2.x + tri.p3.x) / 3);
-  int y = (int)((tri.p1.y + tri.p2.y + tri.p3.y) / 3);
-  x = constrain(x, 0, width - 1);
-  y = constrain(y, 0, height - 1);
+  int x = constrain((int)((tri.p1.x + tri.p2.x + tri.p3.x) / 3), 0, width - 1);
+  int y = constrain((int)((tri.p1.y + tri.p2.y + tri.p3.y) / 3), 0, height - 1);
   int videoIndex = x + y * vid.width;
   if (videoIndex < vid.pixels.length && videoIndex >= 0) {
     return vid.pixels[videoIndex];
   } else {
-    println("Invalid videoIndex: " + videoIndex);  // Debug statement
     return color(0);  // Return black color in case of invalid index
   }
 }
