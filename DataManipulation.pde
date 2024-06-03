@@ -1,29 +1,36 @@
-import processing.video.*; //<>//
+import geomerative.*; //<>//
+
+import processing.video.*; 
+import java.util.ArrayList;
 
 // CLICK TO BREAK THE SCREEN
 Capture vid;
 
-ArrayList<PVector[]> crackSegments = new ArrayList<PVector[]>(); // Store line segments
-ArrayList<ArrayList<PVector[]>> crackLines = new ArrayList<ArrayList<PVector[]>>(); // Store each crack with all of its segments
-ArrayList<ArrayList<PVector>> closedShapes = new ArrayList<ArrayList<PVector>>(); // Store closed shapes
+ArrayList<RPoint[]> crackSegments = new ArrayList<RPoint[]>(); // Store line segments
+ArrayList<ArrayList<RPoint[]>> crackLines = new ArrayList<ArrayList<RPoint[]>>(); // Store each crack with all of its segments
+ArrayList<ArrayList<RPoint>> closedShapes = new ArrayList<ArrayList<RPoint>>(); // Store closed shapes
 ArrayList<int[]> shapeShifts = new ArrayList<int[]>();
-ArrayList<PVector[]> intersect = new ArrayList<PVector[]>();
+ArrayList<RPoint[]> intersect = new ArrayList<RPoint[]>();
 
 boolean addingCracks = false;
 
 int numPoints = 200;
 PVector[] points = new PVector[numPoints];
-color[] colors = new color[numPoints];
 boolean shattered = false;
 PVector impactPoint;
-Voronoi[] voronoi = new Voronoi[numPoints];
+ArrayList<Triangle> delaunayTriangles = new ArrayList<Triangle>();
 
 void setup() {
   size(640, 480);
+  RG.init(this);
   vid = new Capture(this, width, height);
   vid.start();
   stroke(0);
   frameRate(30);
+
+  for (int i = 0; i < numPoints; i++) {
+    points[i] = new PVector(random(width), random(height));
+  }
 }
 
 void draw() {
@@ -31,34 +38,24 @@ void draw() {
     vid.read();
   }
   
-  /*vid.loadPixels();
-  loadPixels();
+  image(vid, 0, 0);
+  
+  if (shattered) {
+    println("Shattered effect is being applied");
+    loadPixels();
     
-  if(shattered) {
-    for (int x = 0; x < width; x++) {
-      for (int y = 0; y < height; y++) {
-        int closestPoint = -1;
-        float closestDistance = Float.MAX_VALUE;
-  
-        for (int i = 0; i < numPoints; i++) {
-          float d = dist(x, y, points[i].x, points[i].y);
-          if (d < closestDistance) {
-            closestDistance = d;
-            closestPoint = i;
-          }
-        }
-  
-        int index = x + y * width;
-        if (closestPoint != -1) {
-          int videoIndex = x + y * vid.width;
-          pixels[index] = vid.pixels[closestPoint];
-        }
-      }
+    for (Triangle tri : delaunayTriangles) {
+      int colorT = getColorFromTriangle(tri);
+      fill(colorT);
+      beginShape();
+      vertex(tri.p1.x, tri.p1.y);
+      vertex(tri.p2.x, tri.p2.y);
+      vertex(tri.p3.x, tri.p3.y);
+      endShape(CLOSE);
     }
-  }
-  
-  updatePixels();
-  vid.updatePixels();*/
+
+    updatePixels();
+  } 
   
     /*if(!addingCracks) {
       for(int i = 0; i < closedShapes.size(); i++) {
@@ -95,25 +92,111 @@ void draw() {
 
 void mousePressed() {
   //cracks(mouseX, mouseY);
-  crackVoronoi(mouseX, mouseY);
+  crackDelaunay(mouseX, mouseY);
   
 }
 
-void crackVoronoi(int x, int y) {
+void crackDelaunay(int x, int y) {
   for (int i = 0; i < numPoints; i++) {
     points[i] = new PVector(random(width), random(height));
-    voronoi[i] = new Voronoi(points[i]);
   }
 
   impactPoint = new PVector(x, y);
-  for (int i = 0; i < numPoints; i++) {
-    PVector dir = PVector.sub(points[i], impactPoint);
-    dir.normalize();
-    dir.mult(random(5, 15));
+
+  delaunayTriangles.clear();
+  delaunayTriangles = generateDelaunay(points);
+  println("Number of Delaunay Triangles: " + delaunayTriangles.size());
+
+  // Adjust vertices of triangles based on shatter effect
+  for (Triangle tri : delaunayTriangles) {
+    for (PVector p : tri.getPoints()) {
+      float distX = p.x - impactPoint.x;
+      float distY = p.y - impactPoint.y;
+      float distance = sqrt(distX * distX + distY * distY);
+      float displacement = random(10, 50); // Adjust displacement range
+      float directionX = distX / distance;
+      float directionY = distY / distance;
+      p.x += directionX * displacement;
+      p.y += directionY * displacement;
+    }
   }
+
   shattered = true;
 }
 
+ArrayList<Triangle> generateDelaunay(PVector[] points) {
+  ArrayList<Triangle> triangles = new ArrayList<Triangle>();
+  // Create a super triangle that encompasses all the points
+  float maxX = width, maxY = height;
+  float minX = 0, minY = 0;
+
+  PVector p1 = new PVector(minX - 10, minY - 10);
+  PVector p2 = new PVector(maxX + 10, minY - 10);
+  PVector p3 = new PVector((minX + maxX) / 2, maxY + 10);
+
+  Triangle superTriangle = new Triangle(p1, p2, p3);
+  triangles.add(superTriangle);
+
+  for (PVector point : points) {
+    ArrayList<Triangle> badTriangles = new ArrayList<Triangle>();
+    ArrayList<Edge> polygon = new ArrayList<Edge>();
+
+    for (Triangle triangle : triangles) {
+      if (triangle.circumcircleContains(point)) {
+        badTriangles.add(triangle);
+        for (Edge edge : triangle.getEdges()) {
+          polygon.add(edge);
+        }
+      }
+    }
+
+    for (Triangle triangle : badTriangles) {
+      triangles.remove(triangle);
+    }
+
+    ArrayList<Edge> badEdges = new ArrayList<Edge>();
+    for (int i = 0; i < polygon.size(); i++) {
+      for (int j = i + 1; j < polygon.size(); j++) {
+        if (polygon.get(i).equals(polygon.get(j))) {
+          badEdges.add(polygon.get(i));
+          badEdges.add(polygon.get(j));
+        }
+      }
+    }
+
+    for (Edge edge : badEdges) {
+      polygon.remove(edge);
+    }
+
+    for (Edge edge : polygon) {
+      triangles.add(new Triangle(edge.p1, edge.p2, point));
+    }
+  }
+
+  ArrayList<Triangle> validTriangles = new ArrayList<Triangle>();
+  for (Triangle triangle : triangles) {
+    if (!triangle.hasVertex(p1) && !triangle.hasVertex(p2) && !triangle.hasVertex(p3)) {
+      validTriangles.add(triangle);
+    }
+  }
+
+  return validTriangles;
+}
+
+int getColorFromTriangle(Triangle tri) {
+  int x = (int)((tri.p1.x + tri.p2.x + tri.p3.x) / 3);
+  int y = (int)((tri.p1.y + tri.p2.y + tri.p3.y) / 3);
+  x = constrain(x, 0, width - 1);
+  y = constrain(y, 0, height - 1);
+  int videoIndex = x + y * vid.width;
+  if (videoIndex < vid.pixels.length && videoIndex >= 0) {
+    return vid.pixels[videoIndex];
+  } else {
+    println("Invalid videoIndex: " + videoIndex);  // Debug statement
+    return color(0);  // Return black color in case of invalid index
+  }
+}
+/*
 void cracks(int x, int y) {
   addingCracks = true;
   int numCracks = (int)random(2, 5);
@@ -243,4 +326,4 @@ boolean pointInPolygon(int x, int y, ArrayList<PVector> shape) {
     }
   }
   return crossings % 2 != 0;
-}
+}*/
