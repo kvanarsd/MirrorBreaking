@@ -40,6 +40,12 @@ void draw() {
     genTriCount.remove(0);
   }
   if(!shatter) {
+    int[] ogPixels = new int[width * height];
+    
+    for (int i = 0; i < width * height; i++) {
+      ogPixels[i] = vid.pixels[i];
+    }
+    
     for (Triangle tri : allTriangles) {
       float minX = Float.MAX_VALUE;
       float minY = Float.MAX_VALUE; 
@@ -55,14 +61,14 @@ void draw() {
         maxY = max(maxY, vertex.y);
       }
       
-      shiftPix(minX, minY, maxX, maxY, tri, tri.shift);
+      shiftPix(minX, minY, maxX, maxY, tri, tri.shift, ogPixels);
     }
   }
     
   
   image(vid, 0, 0);
   
-  /* crack lines
+  /*//crack lines
   for (Triangle tri : allTriangles) {
     line(tri.p1.x, tri.p1.y, tri.p2.x, tri.p2.y);
     line(tri.p3.x, tri.p3.y, tri.p2.x, tri.p2.y);
@@ -103,6 +109,14 @@ void crackDelaunay(int x, int y) {
   genTriCount.add(delaunayTriangles.size());
   shatterCounter++;
   println("Number of Delaunay Triangles: " + delaunayTriangles.size());
+  
+  /*for (Triangle tri : delaunayTriangles) {
+    beginShape();
+    vertex(tri.p1.x, tri.p1.y);
+    vertex(tri.p2.x, tri.p2.y);
+    vertex(tri.p3.x, tri.p3.y);
+    endShape(CLOSE);
+  }*/
   
   shatter = true;
   for(Triangle tri: delaunayTriangles) {
@@ -172,16 +186,12 @@ ArrayList<Triangle> generateDelaunay(PVector[] points) {
   return validTriangles;
 }
 
-void shiftPix(float x1, float y1, float x2, float y2, Triangle tri, PVector shift) {
+void shiftPix(float x1, float y1, float x2, float y2, Triangle tri, PVector shift, int[] ogPixels) {
   vid.loadPixels();
   
   int w = vid.width;
   int h = vid.height;
-  int[] ogPixels = new int[w * h];
   
-  for (int i = 0; i < w * h; i++) {
-    ogPixels[i] = vid.pixels[i];
-  }
   
   // shift from og image
   for (int i = (int)x1; i <= x2; i++) {
@@ -195,8 +205,39 @@ void shiftPix(float x1, float y1, float x2, float y2, Triangle tri, PVector shif
       }
     }
   }
+  
+  drawLine((int)tri.p1.x, (int)tri.p1.y, (int)tri.p2.x, (int)tri.p2.y, color(0));
+  drawLine((int)tri.p3.x, (int)tri.p3.y, (int)tri.p2.x, (int)tri.p2.y, color(0));
+  drawLine((int)tri.p1.x, (int)tri.p1.y, (int)tri.p3.x, (int)tri.p3.y, color(0));
+  
   vid.updatePixels();
 }
+
+void drawLine(int x0, int y0, int x1, int y1, color lineColor) {
+  int dx = abs(x1 - x0);
+  int dy = abs(y1 - y0);
+  int sx = x0 < x1 ? 1 : -1;
+  int sy = y0 < y1 ? 1 : -1;
+  int err = dx - dy;
+  
+  while (true) {
+    if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height) {
+      vid.pixels[x0 + y0 * width] = lineColor;
+    }
+    
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+}
+
 
 boolean pointInTriangle(int x, int y, Triangle tri) {
   int crossings = 0;
