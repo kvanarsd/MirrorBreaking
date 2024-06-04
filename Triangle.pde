@@ -2,11 +2,13 @@ class Triangle {
   PVector p1, p2, p3;
   PVector circumcenter;
   float circumradius;
+  PVector shift;
 
   Triangle(PVector p1, PVector p2, PVector p3) {
     this.p1 = p1;
     this.p2 = p2;
     this.p3 = p3;
+    this.shift = new PVector((int)random(-50, 50),(int)random(-50, 50));
     calculateCircumcircle();
   }
 
@@ -31,6 +33,7 @@ class Triangle {
   boolean circumcircleContains(PVector p) {
     return PVector.dist(circumcenter, p) <= circumradius;
   }
+  
 
   Edge[] getEdges() {
     return new Edge[] {
