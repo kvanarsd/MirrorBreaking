@@ -10,10 +10,14 @@ int numPoints = 10;
 PVector[] points = new PVector[numPoints];
 boolean shatter = false;
 PVector impactPoint;
+int inkLen = 0;
 ArrayList<Triangle> delaunayTriangles = new ArrayList<Triangle>();
 ArrayList<Triangle> allTriangles = new ArrayList<Triangle>();
 int shatterCounter = 0;
 ArrayList<Integer> genTriCount = new ArrayList<Integer>();
+ArrayList<Particle> particles = new ArrayList<Particle>();
+int time = 0;
+
 
 void setup() {
   size(640, 480);
@@ -32,6 +36,8 @@ void draw() {
   if (vid.available()) {
     vid.read();
   }
+  time++;
+  
   if(shatterCounter == 3) {
     shatterCounter--;
     for(int i = 0; i < genTriCount.get(0); i++) {
@@ -50,7 +56,7 @@ void draw() {
       float minX = Float.MAX_VALUE;
       float minY = Float.MAX_VALUE; 
       float maxX = Float.MIN_VALUE;
-      float maxY = Float.MIN_VALUE;
+      float maxY = Float.MIN_VALUE; 
       
       PVector[] vertices = {tri.p1, tri.p2, tri.p3};
 
@@ -68,18 +74,33 @@ void draw() {
   
   image(vid, 0, 0);
   
-  /*//crack lines
-  for (Triangle tri : allTriangles) {
-    line(tri.p1.x, tri.p1.y, tri.p2.x, tri.p2.y);
-    line(tri.p3.x, tri.p3.y, tri.p2.x, tri.p2.y);
-    line(tri.p1.x, tri.p1.y, tri.p3.x, tri.p3.y);
-  }*/
+  if(impactPoint != null && time % 2 == 0) {
+    println(genTriCount.get(genTriCount.size()-1) + " size " + allTriangles.size());
+    int cur = 0;
+    for(int i = 0; i < genTriCount.size()-1; i++) {
+      cur += genTriCount.get(i);
+    }
+    for (int i = cur; i < allTriangles.size(); i++) {
+      Triangle tri = allTriangles.get(i);
+      particles.add(new Particle(tri.p1.x, tri.p1.y));
+    }
+  }
+  // Update and display all particles
+  for (int i = particles.size() - 1; i >= 0; i--) {
+    Particle p = particles.get(i);
+    p.update();
+    p.display();
+    if (p.isFinished()) {
+      particles.remove(i);
+    }
+  }
 }
 
+
 void mousePressed() {
-  //cracks(mouseX, mouseY);
   crackDelaunay(mouseX, mouseY);
-  
+  inkLen = 0;
+  impactPoint = new PVector(mouseX, mouseY);
 }
 
 void crackDelaunay(int x, int y) {
@@ -214,19 +235,22 @@ void shiftPix(float x1, float y1, float x2, float y2, Triangle tri, PVector shif
 }
 
 void drawLine(int x0, int y0, int x1, int y1, color lineColor) {
-  int dx = abs(x1 - x0);
-  int dy = abs(y1 - y0);
-  int sx = x0 < x1 ? 1 : -1;
+  int dx = abs(x1 - x0); // horizontal dist
+  int dy = abs(y1 - y0); // vertical dist
+  // direction
+  int sx = x0 < x1 ? 1 : -1; 
   int sy = y0 < y1 ? 1 : -1;
+  // which way to step
   int err = dx - dy;
   
   while (true) {
-    if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height) {
+    if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height) { // within bounds
       vid.pixels[x0 + y0 * width] = lineColor;
     }
     
-    if (x0 == x1 && y0 == y1) break;
-    int e2 = 2 * err;
+    if (x0 == x1 && y0 == y1) break; // reached end
+    int e2 = 2 * err; // double step
+    // choose direction
     if (e2 > -dy) {
       err -= dy;
       x0 += sx;
