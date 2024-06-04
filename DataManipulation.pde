@@ -13,7 +13,7 @@ PVector impactPoint;
 ArrayList<Triangle> delaunayTriangles = new ArrayList<Triangle>();
 ArrayList<Triangle> allTriangles = new ArrayList<Triangle>();
 int shatterCounter = 0;
-int[] genTriCount = new int[5];
+ArrayList<Integer> genTriCount = new ArrayList<Integer>();
 
 void setup() {
   size(640, 480);
@@ -32,14 +32,12 @@ void draw() {
   if (vid.available()) {
     vid.read();
   }
-  if(shatterCounter == 2) {
-    shatterCounter = 0;
-    for(int i = 0; i < genTriCount.length; i++) {
-      println("i " +  genTriCount[i]);
-    }
-    for(int i = 0; i < genTriCount[0]; i++) {
+  if(shatterCounter == 3) {
+    shatterCounter--;
+    for(int i = 0; i < genTriCount.get(0); i++) {
       allTriangles.remove(0);
     }
+    genTriCount.remove(0);
   }
   if(!shatter) {
     for (Triangle tri : allTriangles) {
@@ -102,7 +100,7 @@ void crackDelaunay(int x, int y) {
 
   // Generate Delaunay triangles
   ArrayList<Triangle> delaunayTriangles = generateDelaunay(points);
-  genTriCount[shatterCounter] = delaunayTriangles.size();
+  genTriCount.add(delaunayTriangles.size());
   shatterCounter++;
   println("Number of Delaunay Triangles: " + delaunayTriangles.size());
   
