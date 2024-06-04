@@ -8,47 +8,37 @@ class Triangle {
     this.p1 = p1;
     this.p2 = p2;
     this.p3 = p3;
-    this.shift = new PVector((int)random(-50, 50),(int)random(-50, 50));
+    this.shift = new PVector((int)random(-15, 15),(int)random(-15, 15));
     calculateCircumcircle();
   }
 
   void calculateCircumcircle() {
-    float dA = p1.x * p1.x + p1.y * p1.y;
-    float dB = p2.x * p2.x + p2.y * p2.y;
-    float dC = p3.x * p3.x + p3.y * p3.y;
+    float ax = p1.x, ay = p1.y;
+    float bx = p2.x, by = p2.y;
+    float cx = p3.x, cy = p3.y;
 
-    float aux1 = (dA * (p3.y - p2.y) + dB * (p1.y - p3.y) + dC * (p2.y - p1.y));
-    float aux2 = -(dA * (p3.x - p2.x) + dB * (p1.x - p3.x) + dC * (p2.x - p1.x));
-    float div = (2 * (p1.x * (p3.y - p2.y) + p2.x * (p1.y - p3.y) + p3.x * (p2.y - p1.y)));
+    float d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+    float ux = ((ax*ax + ay*ay) * (by - cy) + (bx*bx + by*by) * (cy - ay) + (cx*cx + cy*cy) * (ay - by)) / d;
+    float uy = ((ax*ax + ay*ay) * (cx - bx) + (bx*bx + by*by) * (ax - cx) + (cx*cx + cy*cy) * (bx - ax)) / d;
 
-    if (div == 0) {
-      circumcenter = new PVector(Float.MAX_VALUE, Float.MAX_VALUE);
-      circumradius = Float.MAX_VALUE;
-    } else {
-      circumcenter = new PVector(aux1 / div, aux2 / div);
-      circumradius = PVector.dist(circumcenter, p1);
-    }
+    circumcenter = new PVector(ux, uy);
+    circumradius = dist(ux, uy, ax, ay);
   }
 
   boolean circumcircleContains(PVector p) {
-    return PVector.dist(circumcenter, p) <= circumradius;
-  }
-  
-
-  Edge[] getEdges() {
-    return new Edge[] {
-      new Edge(p1, p2),
-      new Edge(p2, p3),
-      new Edge(p3, p1)
-    };
+    return dist(p.x, p.y, circumcenter.x, circumcenter.y) < circumradius;
   }
 
   boolean hasVertex(PVector p) {
-    return (p.equals(p1) || p.equals(p2) || p.equals(p3));
+    return p.equals(p1) || p.equals(p2) || p.equals(p3);
   }
 
-  PVector[] getPoints() {
-    return new PVector[] { p1, p2, p3 };
+  ArrayList<Edge> getEdges() {
+    ArrayList<Edge> edges = new ArrayList<Edge>();
+    edges.add(new Edge(p1, p2));
+    edges.add(new Edge(p2, p3));
+    edges.add(new Edge(p3, p1));
+    return edges;
   }
 }
 
