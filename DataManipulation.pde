@@ -17,7 +17,9 @@ int shatterCounter = 0;
 ArrayList<Integer> genTriCount = new ArrayList<Integer>();
 ArrayList<Particle> particles = new ArrayList<Particle>();
 int time = 0;
-
+int startTime = 0;
+int endTime;
+PGraphics vignette;
 
 void setup() {
   size(640, 480);
@@ -30,6 +32,8 @@ void setup() {
   for (int i = 0; i < numPoints; i++) {
     points[i] = new PVector(random(width), random(height));
   }
+  
+  vignette = createVignette(width,height);
 }
 
 void draw() {
@@ -74,7 +78,8 @@ void draw() {
   
   image(vid, 0, 0);
   
-  if(impactPoint != null && time % 2 == 0) {
+  // particle inks
+  if(impactPoint != null && time % 2 == 0 && time - startTime < endTime) {
     println(genTriCount.get(genTriCount.size()-1) + " size " + allTriangles.size());
     int cur = 0;
     for(int i = 0; i < genTriCount.size()-1; i++) {
@@ -94,12 +99,29 @@ void draw() {
       particles.remove(i);
     }
   }
+  image(vignette, 0, 0);
 }
 
+PGraphics createVignette(int w, int h) {
+  PGraphics pg = createGraphics(w, h);
+  pg.beginDraw();
+  pg.noFill();
+  
+  // Draw the radial gradient for vignette
+  for (int r = 0; r < w; r++) {
+    float alpha = map(r, 0, w / 2, 0, 255);
+    pg.stroke(0, 0, 0, alpha);
+    pg.ellipse(w / 2, h / 2, r * 2, r * 2);
+  }
+  
+  pg.endDraw();
+  return pg;
+}
 
 void mousePressed() {
   crackDelaunay(mouseX, mouseY);
-  inkLen = 0;
+  startTime = time;
+  endTime = (int)random(50, 100);
   impactPoint = new PVector(mouseX, mouseY);
 }
 
