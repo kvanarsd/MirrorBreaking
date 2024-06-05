@@ -56,13 +56,13 @@ void draw() {
   
   // only show 2 triangle sets at a time
   if(shatterCounter == 3 || time - startTime > endTime && shatterCounter > 0) {
+    startTime = time;
+    endTime = (int)random(50, 100);
     shatterCounter--;
     for(int i = 0; i < genTriCount.get(0); i++) {
       allTriangles.remove(0);
     }
-    println("after loop");
     genTriCount.remove(0);
-    println("after remove");
   }
   
   if(!shatter) {
@@ -71,7 +71,6 @@ void draw() {
     for (int i = 0; i < width * height; i++) {
       ogPixels[i] = vid.pixels[i];
     }
-    println("before loop");
     for (Triangle tri : allTriangles) {
       float minX = Float.MAX_VALUE;
       float minY = Float.MAX_VALUE; 
@@ -90,7 +89,6 @@ void draw() {
       shiftPix(minX, minY, maxX, maxY, tri, tri.shift, ogPixels);
     }
   }
-    println("after loop");
   
   image(vid, 0, 0);
   
@@ -177,16 +175,7 @@ void crackDelaunay(int x, int y) {
   ArrayList<Triangle> delaunayTriangles = generateDelaunay(points);
   genTriCount.add(delaunayTriangles.size());
   shatterCounter++;
-  println("Number of Delaunay Triangles: " + delaunayTriangles.size());
-  
-  /*for (Triangle tri : delaunayTriangles) {
-    beginShape();
-    vertex(tri.p1.x, tri.p1.y);
-    vertex(tri.p2.x, tri.p2.y);
-    vertex(tri.p3.x, tri.p3.y);
-    endShape(CLOSE);
-  }*/
-  
+
   shatter = true;
   for(Triangle tri: delaunayTriangles) {
     allTriangles.add(tri);
