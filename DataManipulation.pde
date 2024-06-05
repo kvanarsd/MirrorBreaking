@@ -1,10 +1,15 @@
-import geomerative.*; //<>//
+import processing.sound.*; //<>//
+
+import geomerative.*;
 
 import processing.video.*; 
 import java.util.ArrayList;
 
 // CLICK TO BREAK THE SCREEN
 Capture vid;
+SoundFile[] sounds = new SoundFile[3];
+SoundFile break2;
+SoundFile break3;
 
 int numPoints = 10;
 PVector[] points = new PVector[numPoints];
@@ -20,10 +25,15 @@ int time = 0;
 int startTime = 0;
 int endTime;
 PGraphics vignette;
+float tintVignette = 2;
 
 void setup() {
   size(640, 480);
   RG.init(this);
+  sounds[0] = new SoundFile(this, "break1.mp3");
+  sounds[1] = new SoundFile(this, "break2.mp3");
+  sounds[2] = new SoundFile(this, "break3.mp3");
+  
   vid = new Capture(this, width, height);
   vid.start();
   stroke(0);
@@ -32,8 +42,6 @@ void setup() {
   for (int i = 0; i < numPoints; i++) {
     points[i] = new PVector(random(width), random(height));
   }
-  
-  vignette = createVignette(width,height);
 }
 
 void draw() {
@@ -42,13 +50,15 @@ void draw() {
   }
   time++;
   
-  if(shatterCounter == 3) {
+  // only show 2 triangle sets at a time
+  if(shatterCounter == 3 || time - startTime < endTime) {
     shatterCounter--;
     for(int i = 0; i < genTriCount.get(0); i++) {
       allTriangles.remove(0);
     }
     genTriCount.remove(0);
   }
+  
   if(!shatter) {
     int[] ogPixels = new int[width * height];
     
@@ -80,7 +90,6 @@ void draw() {
   
   // particle inks
   if(impactPoint != null && time % 2 == 0 && time - startTime < endTime) {
-    println(genTriCount.get(genTriCount.size()-1) + " size " + allTriangles.size());
     int cur = 0;
     for(int i = 0; i < genTriCount.size()-1; i++) {
       cur += genTriCount.get(i);
@@ -99,17 +108,25 @@ void draw() {
       particles.remove(i);
     }
   }
+  
+  if(particles.size() > 100 && tintVignette > 0.5) {
+    tintVignette -= 0.02;
+  } else if(particles.size() < 100 && tintVignette < 2) {
+    tintVignette += 0.02;
+  }
+  
+  vignette = createVignette(width,height, tintVignette);
   image(vignette, 0, 0);
 }
 
-PGraphics createVignette(int w, int h) {
+PGraphics createVignette(int w, int h, float tint) {
   PGraphics pg = createGraphics(w, h);
   pg.beginDraw();
   pg.noFill();
   
   // Draw the radial gradient for vignette
   for (int r = 0; r < w; r++) {
-    float alpha = map(r, 0, w / 2, 0, 255);
+    float alpha = map(r, 0, w * tint, 0, 255);
     pg.stroke(0, 0, 0, alpha);
     pg.ellipse(w / 2, h / 2, r * 2, r * 2);
   }
@@ -119,6 +136,8 @@ PGraphics createVignette(int w, int h) {
 }
 
 void mousePressed() {
+  //play random sound
+  sounds[(int)random(0,3)].play();
   crackDelaunay(mouseX, mouseY);
   startTime = time;
   endTime = (int)random(50, 100);
