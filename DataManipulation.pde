@@ -14,16 +14,16 @@ SoundFile break3;
 int numPoints = 10;
 PVector[] points = new PVector[numPoints];
 boolean shatter = false;
+int shatterCounter = 0;
 PVector impactPoint;
-int inkLen = 0;
 ArrayList<Triangle> delaunayTriangles = new ArrayList<Triangle>();
 ArrayList<Triangle> allTriangles = new ArrayList<Triangle>();
-int shatterCounter = 0;
 ArrayList<Integer> genTriCount = new ArrayList<Integer>();
 ArrayList<Particle> particles = new ArrayList<Particle>();
+
 int time = 0;
 int startTime = 0;
-int endTime;
+int endTime = 20;
 PGraphics vignette;
 float tintVignette = 2;
 
@@ -48,15 +48,21 @@ void draw() {
   if (vid.available()) {
     vid.read();
   }
+  pushMatrix();
+  scale(-1,1);
+  translate(-width, 0); 
+  
   time++;
   
   // only show 2 triangle sets at a time
-  if(shatterCounter == 3 || time - startTime < endTime) {
+  if(shatterCounter == 3 || time - startTime > endTime && shatterCounter > 0) {
     shatterCounter--;
     for(int i = 0; i < genTriCount.get(0); i++) {
       allTriangles.remove(0);
     }
+    println("after loop");
     genTriCount.remove(0);
+    println("after remove");
   }
   
   if(!shatter) {
@@ -65,7 +71,7 @@ void draw() {
     for (int i = 0; i < width * height; i++) {
       ogPixels[i] = vid.pixels[i];
     }
-    
+    println("before loop");
     for (Triangle tri : allTriangles) {
       float minX = Float.MAX_VALUE;
       float minY = Float.MAX_VALUE; 
@@ -84,7 +90,7 @@ void draw() {
       shiftPix(minX, minY, maxX, maxY, tri, tri.shift, ogPixels);
     }
   }
-    
+    println("after loop");
   
   image(vid, 0, 0);
   
@@ -117,6 +123,7 @@ void draw() {
   
   vignette = createVignette(width,height, tintVignette);
   image(vignette, 0, 0);
+  popMatrix();
 }
 
 PGraphics createVignette(int w, int h, float tint) {
@@ -138,14 +145,14 @@ PGraphics createVignette(int w, int h, float tint) {
 void mousePressed() {
   //play random sound
   sounds[(int)random(0,3)].play();
-  crackDelaunay(mouseX, mouseY);
+  crackDelaunay(width-mouseX, mouseY);
   startTime = time;
   endTime = (int)random(50, 100);
-  impactPoint = new PVector(mouseX, mouseY);
+  impactPoint = new PVector(width-mouseX, mouseY);
 }
 
 void crackDelaunay(int x, int y) {
-  
+  //x = width - x;
   // Add the mouse click point as the first point
   PVector[] points = new PVector[numPoints];
   points[0] = new PVector(x, y);
@@ -253,7 +260,8 @@ void shiftPix(float x1, float y1, float x2, float y2, Triangle tri, PVector shif
   
   int w = vid.width;
   int h = vid.height;
-  
+  //x1 = width - x1; 
+  //x2 = width - x2;
   
   // shift from og image
   for (int i = (int)x1; i <= x2; i++) {
@@ -276,6 +284,9 @@ void shiftPix(float x1, float y1, float x2, float y2, Triangle tri, PVector shif
 }
 
 void drawLine(int x0, int y0, int x1, int y1, color lineColor) {
+ // x0 = width - x0; // Flip the x coordinate
+  //x1 = width - x1; // Flip the x coordinate
+  
   int dx = abs(x1 - x0); // horizontal dist
   int dy = abs(y1 - y0); // vertical dist
   // direction
@@ -304,7 +315,7 @@ void drawLine(int x0, int y0, int x1, int y1, color lineColor) {
 }
 
 
-boolean pointInTriangle(int x, int y, Triangle tri) {
+boolean pointInTriangle(int x, int y, Triangle tri) { 
   int crossings = 0;
 
   PVector[] vertices = {tri.p1, tri.p2, tri.p3};
